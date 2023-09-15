@@ -1,5 +1,5 @@
 # Shifter
-Simple and easy to use daily shiftboard for assigning shifts in timeslots to users. One file containing HTML, CSS and Javascript. 
+Simple and easy to use daily shiftboard for assigning shifts in timeslots to users. All-in-one file (shifter.html) containing HTML, CSS and Javascript. 
 I created this basic version for my work, so we can assign shifts to people on a daily basis using a touch TV (Samsung Flip). This works out very well. 
 
 Try right away by opening the file from GitHUB: https://raw.githack.com/deneijk/Shifter/main/shifter.html
