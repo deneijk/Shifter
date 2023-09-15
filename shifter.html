@@ -1,0 +1,286 @@
+<html>
+    <head>
+        <style>
+            body {
+                background-color: #ccc;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none; 
+                overflow: hidden;
+            }
+
+            body, input, table, textarea {
+                font-family: Verdana, Arial, Helvetica, sans-serif;
+                font-size: 16pt;
+            }
+
+            #board {
+                position:absolute;
+                bottom:0%;
+                left:0%;
+                right:0%;
+                height:94%;
+            }
+
+            table {
+                margin:2%;
+                width:96%;
+                height:96%;
+                background-color: white;
+                border-collapse: collapse;
+                cursor:arrow;
+            }
+
+            th, td.shift{
+                background-color: black;
+                color:white;
+                width: 10%;
+                text-align: center;
+                vertical-align: middle;
+            }
+
+            th,td {
+                border: 2px solid #ccc;
+                margin:0px;
+                padding:5px;
+            }
+
+            td.slot {
+                text-align: center;
+                vertical-align: middle;
+                width:10%;
+            }
+
+            td.slot:hover, #pills span:hover {
+                transition-property: background-color;
+                transition-duration: 0.5s;
+                background-color: rgb(135, 231, 135);
+                cursor: pointer;
+            }
+
+            td.currenttimeslot {
+                background-color: rgb(231, 226, 147);
+            }
+
+            #pills span.selected, #board td.selected{
+                background-color: rgb(0, 75, 0);
+                color:white;
+            }
+            
+            #pills {
+                margin-top:2%;
+                text-align: center;
+            }
+
+            #pills span {
+                background-color: white;
+                border-radius:10px;
+                padding:15px;
+                margin:30px;
+                font-size: 18pt;
+            }
+			
+			#manage {
+				position: absolute;
+				top:2px;
+				right:2px;
+                background-color: white;
+                border-radius:5px;
+                padding:5px;
+                font-size: 10pt;
+                cursor: pointer;
+			}
+			
+			#management {
+				position:absolute;
+                top:0%;
+				left:0%;
+				right:0%;
+				bottom:0%;
+                background-color: rgb(0,0,0,0.9);
+			}
+
+            #management #panel {
+                position:absolute;
+				top:15%;
+				left:15%;
+				right:15%;
+				bottom:15%;
+				background-color:white;
+				border:20px solid silver;
+				padding:2%;
+            }
+			
+            #management #panel textarea{
+                width: 100%;
+                margin-bottom: 25px;
+            }
+
+            #management #panel input[type=checkbox]{
+                zoom: 2;
+            }
+
+			.hidden {
+				display:none;
+			}
+        </style>
+        <script>
+            let shifts = ['Phonecalls(*)','Tickets','Inventory','Introductions','Imaging','Quality','Cleanup','Repair','Returns','Maintenance','Planning','Time-off'];
+            let users = ['Greg','Eric','Susan','Brian','Lisa','Oscar','Bert','Mary','Donald'];
+            let timeslots = [{start:7.5,end:8}
+				,{start:8,end:10}
+				,{start:10,end:12.25}
+				,{start:12.75,end:14}
+				,{start:14,end:16}
+				,{start:16,end:16.5}
+			];
+            window.onload = function(){
+				document.getElementById('manage').addEventListener('click',function(){
+					if (confirm("Do you want to clear the shiftboard?")) {
+						localStorage.clear();
+						location.reload();
+					}
+				});
+                loadData();
+                fillPillsDIV();
+                fillBoardDIV();
+                loadBoard();
+                saveData();
+                markCurrentTimeslot();
+            }
+
+            function showManagement(){
+                let management = document.getElementById('management');
+                management.classList.remove('hidden');
+                let panel = document.createElement("div");
+                panel.innerHTML = "<div id='panel'>Users:<textarea id='users' rows='5'></textarea>"+
+                    "Shifts:<textarea id='shifts' rows='5'></textarea>"+
+                    "<input type='checkbox' checked>Clear board</input></div>";
+                management.appendChild(panel);
+                document.getElementById('users').value = users;
+                document.getElementById('shifts').value = shifts;
+            }
+
+            function markCurrentTimeslot(){
+                setInterval(function(){
+                    let currentTime = new Date();
+                    let currentHours = currentTime.getHours()+(currentTime.getMinutes()/60);
+                    document.querySelectorAll('td.slot').forEach(slot => {
+                        if (currentHours>=timeslots[slot.slot].start && currentHours<timeslots[slot.slot].end) slot.classList.add('currenttimeslot');
+                        else slot.classList.remove('currenttimeslot');
+                    });
+                },1000);
+            }
+
+            function loadData(){
+                if (localStorage.shifts) shifts = JSON.parse(localStorage.shifts);
+                if (localStorage.users) users = JSON.parse(localStorage.users);
+                shifts.sort();
+                users.sort();
+            }
+
+            function saveData(){
+                localStorage.shifts = JSON.stringify(shifts);
+                localStorage.users = JSON.stringify(users);
+                saveBoard();
+            }
+
+            function fillPillsDIV(){
+                let pills = '';
+                users.forEach((user)=>{
+                    pills += '<span>'+user+'</span>';
+                });
+                document.getElementById('pills').innerHTML = pills;
+                document.querySelectorAll('#pills span')
+                    .forEach(
+                        el => el.addEventListener('click',function(){
+                            this.classList.toggle("selected");
+                            showSelectionsOnBoard();
+                            saveBoard();
+                        })
+                    );
+            }
+			
+			function hourNumberToString(hourNumber){
+				let hour = Math.floor(hourNumber);
+				let minutes = 60*(hourNumber-hour);
+				return ('0'+hour).slice(-2)+':'+('0'+minutes).slice(-2);
+			}
+			
+			function labelSlot(slot){
+				return hourNumberToString(timeslots[slot].start)+' - '+hourNumberToString(timeslots[slot].end);
+			}
+
+            function fillBoardDIV(){
+                let board = '<tr><th class="shift">shifts</th>';
+                for (let slot=0; slot<timeslots.length; slot++) {
+                    board += '<th>'+labelSlot(slot)+'</th>'
+                }
+                board += '</tr>';
+                shifts.forEach((shift) => {
+                    board += '<tr><td class="shift">'+shift+'</td>';
+                    for (let slot=0; slot<timeslots.length; slot++) {
+                        board += '<td class="slot" slot="'+slot+'" id="'+shift+'-'+slot+'"> </td>'
+                    }
+                    board += '</tr>';
+                });
+                board = '<table>'+board+'</table>';
+                document.getElementById('board').innerHTML = board;
+                document.querySelectorAll('#board td.slot')
+                    .forEach(
+                        el => el.addEventListener('click',assignClick)
+                    );
+            }
+
+            function assignClick(e){
+                let allSelectedPills = document.querySelectorAll('#pills span.selected');
+                if (allSelectedPills.length > 0) {
+                    let content = this.textContent.trim();
+                    if (content.length > 0) content = ','+content;
+                    allSelectedPills.forEach(pill => {
+                            let pillText = ','+pill.textContent;
+                            if (content.indexOf(pillText) > -1) content = content.replace(pillText,'');
+                            else content += pillText;
+                        });
+                    this.textContent = content.substring(1);
+                } 
+                else this.textContent = '';
+                showSelectionsOnBoard();
+                saveBoard();
+            }
+
+            function showSelectionsOnBoard(){
+                let allSelectedPills = document.querySelectorAll('#pills span.selected');
+                document.querySelectorAll('td.slot')
+                    .forEach(
+                        el => {
+                            let hasAllPills = allSelectedPills.length > 0;
+                            allSelectedPills.forEach(pill => {
+                                if (el.textContent.indexOf(pill.textContent) < 0) hasAllPills = false;
+                            });
+                            if (hasAllPills) el.classList.add('selected');
+                            else el.classList.remove('selected');
+                        }
+                    );
+            }
+
+            function loadBoard(){
+                document.querySelectorAll('td.slot')
+                    .forEach(el => el.textContent = localStorage.getItem(el.id)||'');                
+            }
+
+            function saveBoard(){
+                document.querySelectorAll('td.slot')
+                    .forEach(el => localStorage.setItem(el.id,el.textContent));                
+            }
+
+        </script>
+    </head>
+    <body>
+        <div id="pills"></div>
+        <div id="board"></div>
+        <div id="manage">clear</div>
+		<div id="management" class="hidden"></div>
+    </body>
+</html>
